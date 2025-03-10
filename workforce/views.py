@@ -2,9 +2,98 @@ from django.shortcuts import render, redirect
 from django.views import View
 from django.views.generic import TemplateView
 from django.db import OperationalError
-from .models import OptimizationParameters, OptimizationResult
+from django.db.models import Q
+from datetime import datetime, timedelta
+from .models import OptimizationParameters, OptimizationResult, Worker, Shift, ShiftAssignment
 from .forms import OptimizationForm
 import json
+
+def check_shift_gap_rule(worker, shift):
+    """
+    Check if assigning this shift would violate the 2-shift gap rule.
+    Returns True if the assignment is allowed, False otherwise.
+    """
+    # Get all shifts assigned to this worker within 2 shifts before and after
+    shift_date = shift.date
+    shift_type = shift.shift_type
+    
+    # Define shift order
+    shift_order = {'morning': 0, 'afternoon': 1, 'night': 2}
+    current_shift_index = shift_order[shift_type]
+    
+    # Calculate date range to check (2 days before and after)
+    start_date = shift_date - timedelta(days=2)
+    end_date = shift_date + timedelta(days=2)
+    
+    # Get existing assignments in this range
+    existing_assignments = ShiftAssignment.objects.filter(
+        worker=worker,
+        shift__date__range=(start_date, end_date)
+    ).select_related('shift')
+    
+    for assignment in existing_assignments:
+        assigned_date = assignment.shift.date
+        assigned_type = assignment.shift.shift_type
+        assigned_index = shift_order[assigned_type]
+        
+        # Calculate shift difference
+        date_diff = (shift_date - assigned_date).days
+        shift_diff = current_shift_index - assigned_index
+        total_shifts_between = date_diff * 3 + shift_diff
+        
+        # If less than 2 shifts between assignments, rule is violated
+        if abs(total_shifts_between) < 2:
+            return False
+    
+    return True
+
+def assign_workers_to_shifts(shift, available_workers):
+    """
+    Assign workers to a shift while respecting the 2-shift gap rule.
+    """
+    assignments = []
+    skilled_needed = shift.required_skilled
+    semi_skilled_needed = shift.required_semi_skilled
+    
+    # Sort workers by number of assigned shifts (to balance workload)
+    available_workers = sorted(
+        available_workers,
+        key=lambda w: ShiftAssignment.objects.filter(worker=w).count()
+    )
+    
+    for worker in available_workers:
+        # Skip if worker already has maximum weekly shifts
+        week_start = shift.date - timedelta(days=shift.date.weekday())
+        week_end = week_start + timedelta(days=6)
+        weekly_shifts = ShiftAssignment.objects.filter(
+            worker=worker,
+            shift__date__range=(week_start, week_end)
+        ).count()
+        
+        if weekly_shifts >= worker.max_shifts_per_week:
+            continue
+        
+        # Check if worker can be assigned according to 2-shift gap rule
+        if not check_shift_gap_rule(worker, shift):
+            continue
+        
+        # Assign worker based on their skill level and remaining need
+        if worker.skill_level == 'skilled' and skilled_needed > 0:
+            assignments.append(ShiftAssignment(worker=worker, shift=shift))
+            skilled_needed -= 1
+        elif worker.skill_level == 'semi_skilled' and semi_skilled_needed > 0:
+            assignments.append(ShiftAssignment(worker=worker, shift=shift))
+            semi_skilled_needed -= 1
+        
+        # Break if all positions are filled
+        if skilled_needed == 0 and semi_skilled_needed == 0:
+            break
+    
+    # Bulk create all assignments
+    if assignments:
+        ShiftAssignment.objects.bulk_create(assignments)
+    
+    return len(assignments)
 
 class OptimizationView(TemplateView):
     template_name = 'index.html'
@@ -18,23 +107,24 @@ class OptimizationView(TemplateView):
             # Get the latest result if it exists
             latest_result = OptimizationResult.objects.filter(parameters=params).last()
             
-            # Generate sensitivity data for chart
-            sensitivity_data = []
-            if latest_result:
-                for b in range(int(params.budget * 0.5), int(params.budget * 1.5), int(params.budget * 0.1)):
-                    result = self.solve_with_budget(params, b)
-                    sensitivity_data.append({
-                        'budget': b,
-                        'production': result['production']
-                    })
+            # Get upcoming shifts and their assignments
+            upcoming_shifts = Shift.objects.filter(
+                date__gte=datetime.now().date()
+            ).order_by('date', 'shift_type')
+            
+            shift_assignments = {}
+            for shift in upcoming_shifts:
+                assignments = ShiftAssignment.objects.filter(shift=shift).select_related('worker')
+                shift_assignments[shift.id] = assignments
             
             context = {
                 'form': form,
                 'result': latest_result,
-                'sensitivity_data': json.dumps(sensitivity_data),
+                'upcoming_shifts': upcoming_shifts,
+                'shift_assignments': shift_assignments,
             }
             
-            return render(request, 'workforce/optimize.html', context)
+            return render(request, self.template_name, context)
         except OperationalError:
             # Database is not ready yet, just render the template
             return render(request, self.template_name)

@@ -1,4 +1,3 @@
-
 from django.db import models
 
 class OptimizationParameters(models.Model):
@@ -13,6 +12,47 @@ class OptimizationParameters(models.Model):
     
     def __str__(self):
         return f"Optimization Parameters (ID: {self.id})"
+
+class Worker(models.Model):
+    SKILL_CHOICES = [
+        ('skilled', 'Skilled'),
+        ('semi_skilled', 'Semi-Skilled'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    skill_level = models.CharField(max_length=20, choices=SKILL_CHOICES)
+    max_shifts_per_week = models.IntegerField(default=5)
+    
+    def __str__(self):
+        return f"{self.name} ({self.skill_level})"
+
+class Shift(models.Model):
+    SHIFT_TYPES = [
+        ('morning', 'Morning'),
+        ('afternoon', 'Afternoon'),
+        ('night', 'Night'),
+    ]
+    
+    date = models.DateField()
+    shift_type = models.CharField(max_length=20, choices=SHIFT_TYPES)
+    required_skilled = models.IntegerField()
+    required_semi_skilled = models.IntegerField()
+    
+    class Meta:
+        unique_together = ['date', 'shift_type']
+    
+    def __str__(self):
+        return f"{self.date} - {self.shift_type}"
+
+class ShiftAssignment(models.Model):
+    worker = models.ForeignKey(Worker, on_delete=models.CASCADE)
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE)
+    
+    class Meta:
+        unique_together = ['worker', 'shift']
+    
+    def __str__(self):
+        return f"{self.worker} assigned to {self.shift}"
 
 class OptimizationResult(models.Model):
     parameters = models.ForeignKey(OptimizationParameters, on_delete=models.CASCADE)
