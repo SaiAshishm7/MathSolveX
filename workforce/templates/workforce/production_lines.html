@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold">Production Line Management</h1>
+        <a href="{% url 'optimize' %}" class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Add New Production Line Form -->
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Add New Production Line</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for field in form %}
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <p class="text-red-500 text-xs italic">{{ field.errors.0 }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">
+                Add Production Line
+            </button>
+        </form>
+    </div>
+
+    <!-- Existing Production Lines -->
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8">
+        <h2 class="text-2xl font-bold mb-4">Existing Production Lines</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for line in production_lines %}
+            <div class="border rounded p-4 bg-gray-50">
+                <h3 class="text-xl font-bold mb-2">{{ line.name }}</h3>
+                <div class="space-y-2">
+                    <p><span class="font-semibold">Priority:</span> {{ line.priority }}</p>
+                    <p><span class="font-semibold">Workers:</span> {{ line.min_workers_required }} - {{ line.max_workers }} (Optimal: {{ line.optimal_workers }})</p>
+                    <p><span class="font-semibold">Skilled Ratio:</span> {{ line.skilled_ratio_required|floatformat:2 }}</p>
+                    <p><span class="font-semibold">Production Rate:</span> {{ line.production_rate|floatformat:2 }} units/hour</p>
+                </div>
+            </div>
+            {% empty %}
+            <p class="col-span-3 text-center text-gray-500">No production lines configured yet.</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %} 

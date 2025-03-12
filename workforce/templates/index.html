@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold">Workforce Optimization</h1>
+        <a href="{% url 'production_lines' %}" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+            Manage Production Lines
+        </a>
+    </div>
+
+    <!-- Optimization Form -->
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Parameters</h2>
+        <form method="post">
+            {% csrf_token %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {{ form.as_p }}
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mt-4">
+                Optimize
+            </button>
+        </form>
+    </div>
+
+    <!-- Latest Result -->
+    {% if result %}
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Latest Result</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <p class="font-semibold">Skilled Workers: {{ result.skilled_workers }}</p>
+                <p class="font-semibold">Semi-Skilled Workers: {{ result.semi_skilled_workers }}</p>
+            </div>
+            <div>
+                <p class="font-semibold">Total Production: {{ result.total_production|floatformat:2 }}</p>
+                <p class="font-semibold">Budget Used: ${{ result.budget_used|floatformat:2 }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Production Lines -->
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-8">
+        <h2 class="text-2xl font-bold mb-4">Production Lines</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {% for line in production_lines %}
+            <div class="border rounded p-4">
+                <h3 class="text-xl font-bold mb-2">{{ line.name }}</h3>
+                <p>Priority: {{ line.priority }}</p>
+                <p>Workers: {{ line.min_workers_required }} - {{ line.max_workers }} (Optimal: {{ line.optimal_workers }})</p>
+                <p>Skilled Ratio: {{ line.skilled_ratio_required|floatformat:2 }}</p>
+                <p>Production Rate: {{ line.production_rate|floatformat:2 }} units/hour</p>
+            </div>
+            {% empty %}
+            <p>No production lines configured.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Upcoming Shifts -->
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8">
+        <h2 class="text-2xl font-bold mb-4">Upcoming Shifts</h2>
+        {% for shift in upcoming_shifts %}
+        <div class="mb-8 border-b pb-4">
+            <h3 class="text-xl font-bold mb-4">{{ shift.date|date:"l, F j" }} - {{ shift.get_shift_type_display }}</h3>
+            
+            <!-- Worker Assignments -->
+            <div class="mb-4">
+                <h4 class="text-lg font-semibold mb-2">Worker Assignments</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for assignment in shift_data|get_item:shift.id|get_item:'assignments' %}
+                    <div class="border rounded p-2">
+                        <p class="font-semibold">{{ assignment.worker.name }}</p>
+                        <p class="text-sm">{{ assignment.worker.get_skill_level_display }}</p>
+                    </div>
+                    {% empty %}
+                    <p>No workers assigned yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Production Line Assignments -->
+            <div>
+                <h4 class="text-lg font-semibold mb-2">Production Line Assignments</h4>
+                {% regroup shift_data|get_item:shift.id|get_item:'line_assignments' by production_line as line_groups %}
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {% for line_group in line_groups %}
+                    <div class="border rounded p-4">
+                        <h5 class="font-bold mb-2">{{ line_group.grouper.name }}</h5>
+                        <div class="space-y-2">
+                            {% for assignment in line_group.list %}
+                            <p class="text-sm">
+                                {{ assignment.shift_assignment.worker.name }}
+                                ({{ assignment.shift_assignment.worker.get_skill_level_display }})
+                            </p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p>No line assignments yet.</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <p>No upcoming shifts scheduled.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 

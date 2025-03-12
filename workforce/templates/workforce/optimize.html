@@ -1,0 +1,181 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Workforce Optimization</h1>
+    <p class="lead mb-5">Optimize your workforce allocation for car manufacturing using linear programming</p>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title">Problem Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.budget.id_for_label }}">Daily Budget (INR)</label>
+                                    {{ form.budget }}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.skilled_cost.id_for_label }}">Skilled Worker Daily Cost (INR)</label>
+                                    {{ form.skilled_cost }}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.semi_skilled_cost.id_for_label }}">Semi-Skilled Worker Daily Cost (INR)</label>
+                                    {{ form.semi_skilled_cost }}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.max_skilled_workers.id_for_label }}">Maximum Available Skilled Workers</label>
+                                    {{ form.max_skilled_workers }}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.min_production.id_for_label }}">Minimum Daily Production (Cars)</label>
+                                    {{ form.min_production }}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.skilled_production.id_for_label }}">Cars per Skilled Worker</label>
+                                    {{ form.skilled_production }}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.semi_skilled_production.id_for_label }}">Cars per Semi-Skilled Worker</label>
+                                    {{ form.semi_skilled_production }}
+                                </div>
+                                
+                                <div class="form-group mb-3">
+                                    <label for="{{ form.max_semi_skilled_workers.id_for_label }}">Maximum Available Semi-Skilled Workers</label>
+                                    {{ form.max_semi_skilled_workers }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary w-100">Optimize Workforce Allocation</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            {% if result %}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title">Optimal Solution</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-6 text-center">
+                            <div class="bg-light rounded p-3">
+                                <h2>{{ result.skilled_workers }}</h2>
+                                <p class="text-muted mb-0">Skilled Workers</p>
+                            </div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <div class="bg-light rounded p-3">
+                                <h2>{{ result.semi_skilled_workers }}</h2>
+                                <p class="text-muted mb-0">Semi-Skilled</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center bg-primary bg-opacity-10 rounded p-3 mb-4">
+                        <h2 class="text-primary">{{ result.total_production|floatformat:0 }}</h2>
+                        <p class="mb-0">Total Car Production</p>
+                    </div>
+                    
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Budget Used:
+                            <span class="fw-bold">Rs{{ result.budget_used|floatformat:2 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Budget Remaining:
+                            <span class="fw-bold">Rs{{ result.parameters.budget|subtract:result.budget_used|floatformat:2 }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            Cost per Car:
+                            <span class="fw-bold">Rs{{ result.budget_used|divide:result.total_production|floatformat:2 }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% if result %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title">Sensitivity Analysis</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="sensitivityChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if result %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('sensitivityChart').getContext('2d');
+    const data = {{ sensitivity_data|safe }};
+    
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: data.map(d => 'Rs' + (d.budget / 1000).toFixed(1) + 'k'),
+            datasets: [{
+                label: 'Total Production',
+                data: data.map(d => d.production),
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'How Budget Affects Production'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Production (Cars)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Budget'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
