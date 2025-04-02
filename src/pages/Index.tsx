@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calculator, BarChart3, Truck, Users, ArrowRight, Clock, Factory } from 'lucide-react';
+import { Calculator, BarChart3, Truck, Users, ArrowRight, Clock, Factory, Package } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Hero from '@/components/Hero';
 import Navbar from '@/components/Navbar';
@@ -33,6 +33,12 @@ const Index = () => {
       description: 'Optimize distribution networks and minimize transportation costs.',
       icon: <Truck className="w-6 h-6" />,
       path: '/transportation'
+    },
+    {
+      title: '0/1 Knapsack',
+      description: 'Solve the classic 0/1 Knapsack problem using integer programming to find optimal combinations.',
+      icon: <Package className="w-6 h-6" />,
+      path: '/knapsack'
     },
     {
       title: 'Workforce Shift Scheduler',

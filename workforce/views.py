@@ -9,9 +9,11 @@ from .models import (
     Shift, ShiftAssignment, ProductionLine, LineAssignment
 )
 from .forms import OptimizationForm, ProductionLineForm
+from .knapsack import solve_knapsack, format_solution
 import json
 import numpy as np
 from pulp import *
+from django.http import JsonResponse
 
 def check_shift_gap_rule(worker, shift):
     """
@@ -198,7 +200,7 @@ def assign_workers_to_shifts(shift, available_workers):
     return len(assignments)
 
 class OptimizationView(TemplateView):
-    template_name = 'index.html'
+    template_name = 'workforce/index.html'
     
     def get(self, request):
         try:
@@ -230,12 +232,20 @@ class OptimizationView(TemplateView):
             # Get production lines
             production_lines = ProductionLine.objects.all().order_by('-priority')
             
+            # Get stats for dashboard
+            total_workers = Worker.objects.count()
+            active_shifts = Shift.objects.filter(date__gte=datetime.now().date()).count()
+            total_production_lines = production_lines.count()
+            
             context = {
                 'form': form,
                 'result': latest_result,
                 'upcoming_shifts': upcoming_shifts,
                 'shift_data': shift_data,
                 'production_lines': production_lines,
+                'total_workers': total_workers,
+                'active_shifts': active_shifts,
+                'production_lines': total_production_lines,
             }
             
             return render(request, self.template_name, context)
@@ -471,3 +481,35 @@ class ProductionLineView(View):
             'form': form
         }
         return render(request, self.template_name, context)
+
+class KnapsackView(TemplateView):
+    template_name = 'workforce/knapsack.html'
+    
+    def get(self, request):
+        return render(request, self.template_name)
+    
+    def post(self, request):
+        try:
+            # Parse input data
+            data = json.loads(request.body)
+            values = [float(x) for x in data.get('values', [])]
+            weights = [float(x) for x in data.get('weights', [])]
+            capacity = float(data.get('capacity', 0))
+            
+            if not values or not weights or capacity <= 0:
+                return JsonResponse({
+                    'error': 'Invalid input data. Please provide valid values, weights, and capacity.'
+                }, status=400)
+            
+            # Solve the knapsack problem
+            selected_items, total_value, total_weight = solve_knapsack(values, weights, capacity)
+            
+            # Format the solution
+            solution = format_solution(selected_items, total_value, total_weight, values, weights)
+            
+            return JsonResponse(solution)
+            
+        except Exception as e:
+            return JsonResponse({
+                'error': f'Error solving knapsack problem: {str(e)}'
+            }, status=500)

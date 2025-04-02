@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calculator, BarChart3, Truck, Users, Clock, Factory } from 'lucide-react';
+import { Calculator, BarChart3, Truck, Users, Clock, Factory, Package } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import FeatureCard from '@/components/FeatureCard';
@@ -30,6 +30,12 @@ const Dashboard = () => {
       description: 'Optimize distribution networks to minimize transportation costs between sources and destinations.',
       icon: <Truck className="w-6 h-6" />,
       path: '/transportation'
+    },
+    {
+      title: '0/1 Knapsack',
+      description: 'Solve the classic 0/1 Knapsack problem using integer programming to find the optimal combination of items.',
+      icon: <Package className="w-6 h-6" />,
+      path: '/knapsack'
     }
   ];
 
@@ -102,6 +108,13 @@ const Dashboard = () => {
             <div className="rounded-2xl border border-border p-8 bg-muted/30">
               <h2 className="text-2xl font-display font-medium mb-4">Recent Updates</h2>
               <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
+                  <div>
+                    <h3 className="font-medium">0/1 Knapsack Solver Added</h3>
+                    <p className="text-sm text-muted-foreground">New integer programming solver for the classic 0/1 Knapsack problem.</p>
+                  </div>
+                </div>
                 <div className="flex items-start space-x-4">
                   <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
                   <div>

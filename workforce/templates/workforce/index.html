@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold mb-8 text-center">Optimization Tools Dashboard</h1>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Workforce Optimization Card -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <div class="p-6">
+                <h2 class="text-2xl font-semibold mb-4">Workforce Optimization</h2>
+                <p class="text-gray-600 mb-4">Optimize your workforce allocation and scheduling to maximize productivity while respecting constraints.</p>
+                <a href="/" class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                    Go to Tool
+                </a>
+            </div>
+        </div>
+        
+        <!-- 0/1 Knapsack Card -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <div class="p-6">
+                <h2 class="text-2xl font-semibold mb-4">0/1 Knapsack Solver</h2>
+                <p class="text-gray-600 mb-4">Solve the classic 0/1 Knapsack problem using integer programming to find the optimal combination of items.</p>
+                <a href="/knapsack/" class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                    Go to Tool
+                </a>
+            </div>
+        </div>
+        
+        <!-- Production Lines Card -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
+            <div class="p-6">
+                <h2 class="text-2xl font-semibold mb-4">Production Lines</h2>
+                <p class="text-gray-600 mb-4">Manage and optimize your production line assignments and configurations.</p>
+                <a href="/production-lines/" class="inline-block bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                    Go to Tool
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Stats Section -->
+    <div class="mt-12">
+        <h2 class="text-2xl font-bold mb-6">Quick Stats</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-2">Total Workers</h3>
+                <p class="text-3xl font-bold text-blue-600">{{ total_workers|default:"0" }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-2">Active Shifts</h3>
+                <p class="text-3xl font-bold text-green-600">{{ active_shifts|default:"0" }}</p>
+            </div>
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-2">Production Lines</h3>
+                <p class="text-3xl font-bold text-purple-600">{{ production_lines|default:"0" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

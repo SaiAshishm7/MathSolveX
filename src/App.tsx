@@ -12,6 +12,7 @@ import Transportation from "./pages/Transportation";
 import WorkforceOptimization from "./pages/WorkforceOptimization";
 import WorkforceShiftScheduler from "./pages/WorkforceShiftScheduler";
 import ProductionLines from './pages/ProductionLines';
+import Knapsack from './pages/knapsack';
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/workforce-optimization" element={<WorkforceOptimization />} />
           <Route path="/workforce-shift-scheduler" element={<WorkforceShiftScheduler />} />
           <Route path="/production-lines" element={<ProductionLines />} />
+          <Route path="/knapsack" element={<Knapsack />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
