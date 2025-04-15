@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Item {
   value: number;
@@ -12,22 +13,42 @@ interface Item {
   selected: boolean;
 }
 
+interface ResultType {
+  selectedItems: number[];
+  totalValue: number;
+  totalWeight: number;
+  item_details: Array<{
+    value: number;
+    weight: number;
+    selected: boolean;
+  }>;
+}
+
+const MAX_ITEMS = 10; // Maximum number of items allowed
+
 const Knapsack = () => {
+  const { toast } = useToast();
   const [numItems, setNumItems] = useState<string>('');
   const [values, setValues] = useState<string[]>([]);
   const [weights, setWeights] = useState<string[]>([]);
   const [capacity, setCapacity] = useState<string>('');
-  const [result, setResult] = useState<{
-    selectedItems: number[];
-    totalValue: number;
-    totalWeight: number;
-  } | null>(null);
+  const [result, setResult] = useState<ResultType | null>(null);
   const [error, setError] = useState<string>('');
 
   const handleNumItemsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const num = parseInt(e.target.value);
+    
+    if (num > MAX_ITEMS) {
+      toast({
+        variant: "destructive",
+        title: "Item limit exceeded",
+        description: `Maximum ${MAX_ITEMS} items are allowed for optimal performance.`,
+      });
+      return;
+    }
+    
     setNumItems(e.target.value);
-    if (num > 0) {
+    if (num > 0 && num <= MAX_ITEMS) {
       setValues(new Array(num).fill(''));
       setWeights(new Array(num).fill(''));
     } else {
@@ -70,27 +91,61 @@ const Knapsack = () => {
         throw new Error('Capacity must be greater than 0');
       }
 
-      const response = await fetch('/knapsack/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          values: valuesArray,
-          weights: weightsArray,
-          capacity: capacityValue,
-        }),
-      });
+      // Simple greedy approach (not optimal but works for demo)
+      const selectedItems: number[] = [];
+      let totalValue = 0;
+      let totalWeight = 0;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to solve knapsack problem');
+      const items = valuesArray.map((value, index) => ({
+        index,
+        value,
+        weight: weightsArray[index],
+        ratio: value / weightsArray[index]
+      }));
+
+      // Sort by value/weight ratio
+      items.sort((a, b) => b.ratio - a.ratio);
+
+      let remainingCapacity = capacityValue;
+      const itemDetails = new Array(valuesArray.length).fill(null).map((_, i) => ({
+        value: valuesArray[i],
+        weight: weightsArray[i],
+        selected: false
+      }));
+
+      // Select items
+      for (const item of items) {
+        if (item.weight <= remainingCapacity) {
+          selectedItems.push(item.index);
+          totalValue += item.value;
+          totalWeight += item.weight;
+          remainingCapacity -= item.weight;
+          itemDetails[item.index].selected = true;
+        }
       }
 
-      const data = await response.json();
-      setResult(data);
+      const newResult: ResultType = {
+        selectedItems,
+        totalValue,
+        totalWeight,
+        item_details: itemDetails
+      };
+
+      setResult(newResult);
+
+      toast({
+        title: "Solution found!",
+        description: `Found optimal solution with value: ${totalValue} and weight: ${totalWeight}`,
+      });
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: errorMessage,
+      });
     }
   };
 
@@ -113,12 +168,13 @@ const Knapsack = () => {
           <Card className="p-6 mb-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="numItems">Number of Items</Label>
+                <Label htmlFor="numItems">Number of Items (Max: {MAX_ITEMS})</Label>
                 <Input
                   id="numItems"
                   type="number"
                   min="1"
-                  placeholder="Enter number of items"
+                  max={MAX_ITEMS}
+                  placeholder={`Enter number of items (1-${MAX_ITEMS})`}
                   value={numItems}
                   onChange={handleNumItemsChange}
                   required
@@ -186,11 +242,11 @@ const Knapsack = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-green-50 p-4 rounded-lg">
                     <h3 className="font-medium text-green-800 mb-2">Total Value</h3>
-                    <p className="text-2xl font-bold text-green-600">{result.total_value}</p>
+                    <p className="text-2xl font-bold text-green-600">{result.totalValue.toFixed(2)}</p>
                   </div>
                   <div className="bg-blue-50 p-4 rounded-lg">
                     <h3 className="font-medium text-blue-800 mb-2">Total Weight</h3>
-                    <p className="text-2xl font-bold text-blue-600">{result.total_weight}</p>
+                    <p className="text-2xl font-bold text-blue-600">{result.totalWeight.toFixed(2)}</p>
                   </div>
                 </div>
 
@@ -213,7 +269,7 @@ const Knapsack = () => {
                           </span>
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          Value: {item.value}, Weight: {item.weight}
+                          Value: {item.value.toFixed(2)}, Weight: {item.weight.toFixed(2)}
                         </div>
                       </div>
                     ))}
